@@ -1,0 +1,48 @@
+
+
+[
+    {
+        "datasource": "SQLite",
+        "path": "sqlite:////home/szapal/projects/AtomicEntities/example.db",
+        "entities" : {
+            "A": {
+                "table_name" : "tbl1",
+                "entity_links": ["B"],
+                "primary_key" : "one",
+                "base_fields" : ["one", "two"],
+                "status_field" : {
+                    "key": "one",
+                    "inactive": "False"
+                },
+                "properties": {
+                    "one_val" : "one",
+                    "two_val" : "two"
+                }
+            },
+            "B": {
+                "table_name" : "tbl2",
+                "entity_links" : ["A"],
+                "primary_key" : "key", 
+                "base_fields": ["id","content", "tb"],
+                "properties" : {
+                    "name" : "content",
+                    "key": "id"
+                },
+                "link_properties": {
+                    "a": {
+                        "target_entity": "A",
+                        "target_field": "two",
+                        "source_field": "tb",
+                        "limit": 1
+                    },
+                    "as": {
+                        "target_entity": "A",
+                        "target_field": "one",
+                        "source_field": "two",
+                        "limit": null
+                    }
+                }
+            }
+        }
+    }
+]
