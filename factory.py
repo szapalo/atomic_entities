@@ -10,9 +10,8 @@ MONGODB_SUPPORT = ["MongoDB"]
 DYNAMODB_SUPPORT = ["DynamoDB"]
 SHOTGRID_SUPPORT = ["SG", "ShotGrid"]
 
-
 DS_SUPPORT = SQL_SUPPORT # + MONGODB_SUPPORT + DYNAMODB_SUPPORT + SHOTGRID_SUPPORT
-
+ENV_CONFIG = "ATOMIC_ENTITIES_CONFIG" 
 
 _supported_databases_err = Exception(
     'Supported "datasource" config directive only allows one of the following: {}'.format(
@@ -31,7 +30,7 @@ class Factory:
         self.entities_map = {}
         self.collections_map = {}
         if not config:
-            config = os.environ['ATOMIC_ENTITIES_CONFIG']
+            config = os.environ[ENV_CONFIG]
         if isinstance(config,str):
             ext = os.path.splitext(config)[-1]
             with open(config) as f:
@@ -51,6 +50,18 @@ class Factory:
         else:
             raise _config_input_err
 
+
+    def _validate_entity_names(self):
+        entity_names_set = set()
+        for conf_ds in self.config:
+            entity_names = conf_ds['entities'].keys()
+            name_duplicates = entity_names_set.intersection(entity_names)
+            if name_duplicates:
+                raise Exception(
+                    "Entity names must be unique. \
+                     Duplicates found in config: {}.".format(name_duplicates)
+                )
+            entity_names_set.union(entity_names)
 
     def build(self):
         for conf_ds in self.config:
@@ -75,11 +86,12 @@ class Factory:
         for ds_factory in self.ds_factories:
             ds_factory.crosslink_entities(self.entities_map)
     
-    def get_entities(self):
-        return [
-            entity for ds_factory in self.ds_factories
+    def fetch_entities(self):
+        self.entities_map = {
+            entity.__name__ : entity for ds_factory in self.ds_factories
             for entity in ds_factory.get_entities()
-        ]
+        }
+
     def get_entity(self, entity_name):
         return 
 

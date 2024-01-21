@@ -3,7 +3,7 @@
 [
     {
         "datasource": "SQLite",
-        "path": "sqlite:////home/szapal/projects/AtomicEntities/example.db",
+        "path": "sqlite:////home/szapal/projects/atomic_entities/example.db",
         "entities" : {
             "A": {
                 "table_name" : "tbl1",
@@ -22,7 +22,7 @@
             "B": {
                 "table_name" : "tbl2",
                 "entity_links" : ["A"],
-                "primary_key" : "key", 
+                "primary_key" : "id", 
                 "base_fields": ["id","content", "tb"],
                 "properties" : {
                     "name" : "content",
@@ -31,14 +31,14 @@
                 "link_properties": {
                     "a": {
                         "target_entity": "A",
-                        "target_field": "two",
+                        "target_field": "one",
                         "source_field": "tb",
                         "limit": 1
                     },
-                    "as": {
+                    "aas": {
                         "target_entity": "A",
                         "target_field": "one",
-                        "source_field": "two",
+                        "source_field": "tb",
                         "limit": null
                     }
                 }

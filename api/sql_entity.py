@@ -1,10 +1,17 @@
 
 import typing
-from sqlalchemy import select, update, delete, MappingResult
-from ..utils import BoolOperators
+from sqlalchemy import select, update, delete, MappingResult, RowMapping
+from ..utils import BinaryExpression, BoolOperators
 
+_ITER_TYPES = (list, tuple)
 
 class SQLCollectionAPI:
+    @classmethod
+    def to_dict(cls, row: RowMapping):
+        return dict(row)
+    @classmethod
+    def to_list_dict(cls, result, MappingResult):
+        pass
     @classmethod
     def len(cls, result: MappingResult):
         return result.rowcount
@@ -23,7 +30,9 @@ class SQLAPI:
     _conn = None
     _base_fields = []
     _select_table = None
+    _select_table_one = None
     _select_base_fields = None
+    _select_base_fields_one = None
     _update_table = None
     _insert_table = None
 
@@ -37,33 +46,34 @@ class SQLAPI:
         ]
 
     @classmethod
-    def _resolve_expressions(self, exprs: list):
+    def _resolve_expressions(cls, exprs: typing.List[BinaryExpression]):
         result = []
         for expr in exprs:
+            curr_column = cls._table_.c[expr.name]
             match expr.operator:
                 case BoolOperators.eq_:
-                    if isinstance(expr.value, (list, tuple)) :
-                        result.append(self._table_.c[expr.name].in_(expr.value))
+                    if isinstance(expr.value, _ITER_TYPES) :
+                        result.append(curr_column.in_(expr.value))
                     else:
-                        result.append(self._table_.c[expr.name] == expr.value)
+                        result.append(curr_column == expr.value)
                 case BoolOperators.in_:
-                    result.append(self._table_.c[expr.name].in_(expr.value))
+                    result.append(curr_column.in_(expr.value))
                 case BoolOperators.ne_:
-                    result.append(self._table_.c[expr.name] != expr.value)
+                    result.append(curr_column != expr.value)
                 case BoolOperators.le_:
-                    result.append(self._table_.c[expr.name] <= expr.value)
+                    result.append(curr_column <= expr.value)
                 case BoolOperators.ge_:
-                    result.append(self._table_.c[expr.name] >= expr.value)
+                    result.append(curr_column >= expr.value)
                 case BoolOperators.lt_:
-                    result.append(self._table_.c[expr.name] < expr.value)
+                    result.append(curr_column < expr.value)
                 case BoolOperators.gt_:
-                    result.append(self._table_.c[expr.name] > expr.value)
+                    result.append(curr_column > expr.value)
         return result
 
     @classmethod
     def _resolve_filters(cls, filter: dict):
         return [
-            (cls._table_.c[k].in_(v)) if isinstance(v, (list, tuple))
+            (cls._table_.c[k].in_(v)) if isinstance(v, _ITER_TYPES)
             else (cls._table_.c[k] == v)
             for k,v in filter.items()
         ]
@@ -76,13 +86,20 @@ class SQLAPI:
 
     @classmethod
     def find(cls, exprs: list = [], filters: dict = {}) -> MappingResult:
-        stmt = cls._select_base_fields.where(exprs, filters)
-        return cls._conn.execute(stmt).mappings()
+        stmt = cls._select_expr(exprs, filters)
+        result = cls._conn.execute(stmt).mappings().fetchall()
+        return list(map(dict, result))
+
 
     @classmethod
     def find_one(cls, exprs: list = [], filters: dict = {} ) -> typing.Dict[str, typing.Any]:
-        stmt = cls._select_expr(exprs, filters)
-        return cls._conn.execute(stmt.limit(1)).mappings().fetchone()
+        stmt = cls._select_expr(exprs, filters).limit(1)
+        print(stmt)
+        result = cls._conn.execute(stmt)
+        print(result)
+        result = result.mappings().fetchone()
+        print(result)
+        return dict(result)
 
     @classmethod
     def update(cls, exprs: list = [], data: dict = {}):
@@ -102,4 +119,6 @@ class SQLAPI:
     def delete(cls, exprs: list=[], filters: dict = {}):
         sql_exprs = cls._resolve_expressions(exprs) 
         sql_filters = cls._resolve_filters(filters)
-        cls.__delete_table.where(*sql_exprs, *sql_filters)
+        stmt = cls.__delete_table.where(*sql_exprs, *sql_filters)
+        cls._conn.execute(stmt)
+        cls._conn.commit()

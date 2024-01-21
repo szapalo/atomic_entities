@@ -73,7 +73,6 @@ class BinaryExpression:
         return CompoundExpression(self, None, BoolOperators.not_)
 
 
-
 class CompoundExpression:
     def __init__(self, expr1 : ExprType, expr2 : ExprType, op : Enum) -> None:
         self._expr = (op, expr1, expr2)
