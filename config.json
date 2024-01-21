@@ -1,9 +1,7 @@
-
-
 [
     {
         "datasource": "SQLite",
-        "path": "sqlite:////home/szapal/projects/atomic_entities/example.db",
+        "path": "sqlite:////home/szapalo/Projects/atomic_entities/example.db",
         "entities" : {
             "A": {
                 "table_name" : "tbl1",

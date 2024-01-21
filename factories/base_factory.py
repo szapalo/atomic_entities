@@ -71,12 +71,13 @@ class EntityFactory:
             case None:
                 def link_method(self):
                     value = self[src_key]
-                    if isinstance(value, _ITER_TYPES): value = [value]
+                    if not isinstance(value, _ITER_TYPES): value = [value]
+                    print(value)
                     return tgt_cls.find(tgt_field.in_(value))
             case _:
                 def link_method(self):
                     value = self[src_key]
-                    if isinstance(value, _ITER_TYPES): value = [value]
+                    if not isinstance(value, _ITER_TYPES): value = [value]
                     return tgt_cls.find(
                         tgt_field.in_(value), _limit=limit
                     )

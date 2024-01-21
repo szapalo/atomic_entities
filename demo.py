@@ -1,5 +1,5 @@
 
-
+from pprint import pprint
 p = "./atomic_entities/config.json"
 import json
 from pprint import pprint
@@ -16,9 +16,10 @@ f.build()
 A = f.entities_map['A']
 B = f.entities_map['B']
 
-a = A.findOne(one=10)
-a.update(two="lalala")
+bc = B.find()
+# a = A.findOne(one=10)
+# a.update(two="lalala")
 
-aa = A.find()
+# aa = A.find()
 
-from atomic_entities.api.base_entity import BaseCollection as BC, BaseEntity as BE
+# from atomic_entities.api.base_entity import BaseCollection as BC, BaseEntity as BE

@@ -18,7 +18,7 @@ class BaseCollection:
         self.data = data
         self._len = len(data)
         self._entities = []
-        self._idx = -1
+        self._idx = 0
     
     def __len__(self) -> int:
         return self._len
@@ -26,15 +26,20 @@ class BaseCollection:
     def __iter__(self):
         return self
 
-    def __getitem__(self, idx: int):
-        if self._idx < idx :
-            self._fetch_many(idx)
-        return self._entities[idx]
+    def __getitem__(self, key: int | str):
+        match key:
+            case int():
+                key = key if key >= 0 else self._len - key
+                if self._idx <= key :
+                    self._fetch_many(key + 1)
+                return self._entities[key]
+            case str():
+                return [d[key] for d in self.data]
 
     def __next__(self):
-        self._idx += 1
         if(self._idx < self._len):
             new_entity = self._entity_cls(self._data[self._idx])
+            self._idx += 1
             self._entities.append(new_entity)
             return new_entity
         else:
@@ -43,7 +48,7 @@ class BaseCollection:
     @property
     def entities(self):
         match self._idx:
-            case -1:
+            case 0:
                 self._fetch_all()
             case self._len:
                 return self._entities
@@ -53,13 +58,14 @@ class BaseCollection:
 
     def _fetch_all(self):
         self._entities = [
-            self._entity_cls[d] for d in self.data
+            self._entity_cls(d) for d in self.data
         ]
+        self._idx = self._len
     
-    def _fetch_many(self, i):
-        idx = self._idx + i
+    def _fetch_many(self, idx): # TODO : Improve!!
+        print("_fetch_many")
         self._entities.extend(
-            [self._entity_cls(d) for d in self.data[self._idx: idx ]]
+            [self._entity_cls(d) for d in self.data[self._idx: idx]]
         )
         self._idx = idx
     
@@ -68,8 +74,11 @@ class BaseCollection:
         id_name = id_field.name
         expr = id_field.in_([d[id_name] for d in self.data])
         self._entity_cls._DS_API.update(expr, data)
+        
         for d in self.data:
             d.update(data)
+        
+
 # ------------------------------------------------------------------------------
 # ---------------------- BaseEntity --------------------------------------------
 # ------------------------------------------------------------------------------
@@ -131,9 +140,6 @@ class BaseEntity:
         self._data.update(current_data)
         return updated_data
 
-    # def delete(self):
-    #     self._DS_API.delete(id)
-
     # ------------------ Class Methods -----------------------------------------
 
     @classmethod
@@ -142,26 +148,27 @@ class BaseEntity:
 
     @classmethod
     def findByID(cls, id):
-        return cls(
-            cls._DS_API.find_one((cls._primary_key == id,))
-        )
+        result = cls._DS_API.find_one((cls._primary_key == id,))
+        return cls(result) if result else None
 
     @classmethod
-    def findByIDs(cls, id_lst : LstAny):
+    def findByIDs(cls, id_lst : LstAny) -> BaseCollection:
         return cls._collection_cls(
             cls._DS_API.find((cls._primary_key.in_(id_lst),))
         )
+
     @classmethod
     def findByKey(cls, key):
         return cls.findByID(key)
 
     @classmethod
     def findByKeys(cls, key_lst : LstAny):
-        return cls._collection_cls(cls.findByIDs(key_lst))
+        return cls.findByIDs(key_lst)
 
     @classmethod
     def findOne(cls, *args, **kwargs):
-        return cls(cls._DS_API.find_one(args, kwargs))
+        result = cls._DS_API.find_one(args, kwargs)
+        return cls(result) if result else None
 
     @classmethod
     def find(cls, *args, **kwargs):
@@ -181,12 +188,14 @@ class BaseEntity:
                 raise Exception(
                     "data argument of create() requires dict or list[dict] type"
                 )
+    
     # create many
     # @classmethod
     # def create(cls, lst_data: typing.List[dict]=[]):
     #     return cls._collection_cls(
     #         cls._DS_API.create
     #     )
+    
     # ------------------ Hybrid Methods ----------------------------------------
     
     def _self_update(self, data):
