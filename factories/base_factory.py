@@ -8,6 +8,8 @@ _MANDATORY_PROPERTIES_CONFIG_SPECS = []
 _MANDATORY_LINKPROPS_CONFIG_SPECS = [ 'target_entity', 'source_field' ]
 _DISALLOWLIST_PROP_SPECS = dir(base_entity.BaseEntity)
 
+_ITER_TYPES = (list, tuple)
+
 class Factory:
     @classmethod
     def _validate_config(cls, config: dict):
@@ -60,18 +62,23 @@ class EntityFactory:
         return self.entities_map[entity_name]
 
     @classmethod
-    def _get_link_method(cls, tgt_cls, tgt_field, src_field, limit):
+    def _get_link_method(cls, tgt_cls: base_entity.BaseEntity,
+                         tgt_field: Field, src_key: typing.Any, limit: int):
         match limit:
             case 1 :
                 def link_method(self):
-                    return tgt_cls.findOne({tgt_field: self[src_field]})
+                    return tgt_cls.findOne(tgt_field == self[src_key])
             case None:
                 def link_method(self):
-                    return tgt_cls.find({tgt_field: self[src_field]})
+                    value = self[src_key]
+                    if isinstance(value, _ITER_TYPES): value = [value]
+                    return tgt_cls.find(tgt_field.in_(value))
             case _:
                 def link_method(self):
+                    value = self[src_key]
+                    if isinstance(value, _ITER_TYPES): value = [value]
                     return tgt_cls.find(
-                        {tgt_field: self[src_field]} ,_limit=limit
+                        tgt_field.in_(value), _limit=limit
                     )
         
         return property(fget=link_method)
@@ -104,6 +111,17 @@ class EntityFactory:
         self.collection_cls._entity_cls = self.entity_cls
         self.entity_cls._collection_cls = self.collection_cls
 
+    def _build_property(self, prop_name, key):
+            def prop_setter(self, v):
+                self._data[key] = v
+
+            print("Set prop : {} -> {}".format(prop_name, key) )
+            prop_method = property(
+                fget = lambda self: self._data[key],
+                fset = prop_setter
+            )
+            setattr(self.entity_cls, prop_name, prop_method)
+
     def _build_properties(self):        
         prop_config = self.config['properties']
         self.entity_cls._mapper = prop_config
@@ -112,11 +130,14 @@ class EntityFactory:
             self._data[k] = v
         
         for prop_name, name in prop_config.items():
-            prop_method = property(
-                fget = lambda self: self._data[name],
-                fset = lambda self,value: prop_setter(name,value) 
-            )
-            setattr(self.entity_cls, prop_name, prop_method)
+            self._build_property(prop_name, name)
+            # prop_method = property(
+            #     fget = lambda self: self._data[name],
+            #     # fset = lambda self, value: prop_setter(self,name,value) 
+            # )
+            # setattr(self.entity_cls, prop_name, prop_method)
+
+    # def _crosslink_property(self, prop_name, config, )
 
     def crosslink_properties(self, entities_map :typing.Mapping[str, base_entity.BaseEntity]):
         
@@ -142,7 +163,7 @@ class EntityFactory:
                 self.entity_cls,
                 prop_name,
                 self._get_link_method(
-                    target_entity_cls, target_key_name, source_key_name, limit
+                    target_entity_cls, Field(target_key_name), source_key_name, limit
                 )
             )
 
