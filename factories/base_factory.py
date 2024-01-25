@@ -11,6 +11,11 @@ _DISALLOWLIST_PROP_SPECS = dir(base_entity.BaseEntity)
 _ITER_TYPES = (list, tuple)
 
 class Factory:
+
+    # Initialized by derived Factory
+    _entity_factory_cls = None
+    _table_lable = "table"
+
     @classmethod
     def _validate_config(cls, config: dict):
         return True
@@ -22,8 +27,33 @@ class Factory:
         self.collections_map = {}
         self.entity_factories = None
 
+
     def init_entity_factories(self) -> "EntityFactory":
-        pass
+        print("init_entity_factories")
+        config_entities = self.config['entities']
+        entity_factories = []
+        for entity_name, entity_config in config_entities.items():
+            table_name = entity_config.get("table_name")
+            if table_name in self.table_names:
+                entity_factory = self._entity_factory_cls(
+                    entity_name,
+                    entity_config,
+                    self,
+                    table_name
+                )
+                entity_factories.append(entity_factory)
+            elif table_name:
+                raise Exception(
+                    '{} "{}" is not found in datasource'.format(
+                        self._table_lable, table_name
+                    )
+                )
+            else:
+                raise Exception(
+                    'Config does not specify "table_name" for entity "{}"'.format(entity_name)
+                )
+        print("entity_factories ={}".format(entity_factories))
+        return entity_factories
 
     def build_entities(self):
         self.entity_factories = self.init_entity_factories()
@@ -33,7 +63,9 @@ class Factory:
                 self.collections_map[entity_factory.name]
             ) = entity_factory.build_entity()
     
-    def crosslink_entities(self, entities_map: typing.Mapping[str, base_entity.BaseEntity]):
+    def crosslink_entities(
+            self, entities_map: typing.Mapping[str, base_entity.BaseEntity]
+    ):
         for entity_factory in self.entity_factories:
             entity_factory.crosslink_properties(entities_map)
 
@@ -103,9 +135,9 @@ class EntityFactory:
         class EntityCollection(base_entity.BaseCollection):
             pass
 
-        EntityCollection.__name__ = EntityCollection.__qualname__ = "{}Collection".format(
-            self.name
-        )
+        EntityCollection.__name__ = EntityCollection.__qualname__ = \
+            "{}Collection".format(self.name)
+
         self.collection_cls = EntityCollection
 
     def _link_collection_and_entity(self):
@@ -140,7 +172,9 @@ class EntityFactory:
 
     # def _crosslink_property(self, prop_name, config, )
 
-    def crosslink_properties(self, entities_map :typing.Mapping[str, base_entity.BaseEntity]):
+    def crosslink_properties(
+            self, entities_map :typing.Mapping[str, base_entity.BaseEntity]
+    ):
         
         link_config = self.config.get('link_properties')
         if not link_config:
@@ -169,7 +203,7 @@ class EntityFactory:
             )
 
     def get_entity_cls(self):
-        if not self.entity_cls :
+        if not self.entity_cls:
             raise Exception(
                 'Entity "{}" has not been built. Must \
                 run the build() method.'.format(self.entity_name)

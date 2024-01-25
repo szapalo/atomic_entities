@@ -1,7 +1,7 @@
 [
     {
         "datasource": "SQLite",
-        "path": "sqlite:////home/szapalo/Projects/atomic_entities/example.db",
+        "path": "sqlite:////home/szapal/projects/atomic_entities/example.db",
         "entities" : {
             "A": {
                 "table_name" : "tbl1",
@@ -39,6 +39,21 @@
                         "source_field": "tb",
                         "limit": null
                     }
+                }
+            }
+        }
+    },
+    {
+        "datasource": "MongoDB",
+        "path": "mongodb://localhost:27017/?readPreference=primary&appname=MongoDB%20Compass%20Community&ssl=false",
+        "database" : "exmaple",
+        "entities" : {
+            "MonA": {
+                "table_name" : "tbl1",
+                "base_fields" : ["name", "val"],
+                "properties": {
+                    "one_val" : "name",
+                    "two_val" : "val"
                 }
             }
         }

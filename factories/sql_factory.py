@@ -23,51 +23,11 @@ MANDATORY_CONFIG_ENTRIES = [
     "table_name", "base_fields",
 ]
 
-class Factory(base_factory.Factory):
-    def __init__(self, config) -> None:
-        super().__init__(config)
-
-        db_path = config['path']
-        
-        self.engine = create_engine(db_path)
-        
-        self.metadata = MetaData()
-        self.metadata.reflect(bind=self.engine)
-
-        self.table_names = self.metadata.tables.keys()
-        self.entities_map = {}
-        self.collections_map = {}
-
-    def init_entity_factories(self):
-        print("init_entity_factories")
-        config_entities = self.config['entities']
-        entity_factories = []
-        for entity_name, entity_config in config_entities.items():
-            table_name = entity_config.get("table_name")
-            if(table_name in self.table_names):
-                entity_factory = SQLEntityFactory(
-                    entity_name,
-                    entity_config,
-                    self,
-                    table_name
-                )
-                entity_factories.append(entity_factory)
-            elif table_name:
-                raise Exception(
-                    'Table "{}" is not found in database'.format(table_name)
-                )
-            else:
-                raise Exception(
-                    'Config does not specify "talbe_name" for entity "{}"'.format(entity_name)
-                )
-        print("entity_factories ={}".format(entity_factories))
-        return entity_factories
-
-
-
-
 class SQLEntityFactory(base_factory.EntityFactory):
-    def __init__(self, entity_name: str, config: dict, entities_factory: Factory, table_name: str) -> None:
+    def __init__(
+            self, entity_name: str, config: dict,
+            entities_factory: base_factory.Factory, table_name: str
+    ) -> None:
         super().__init__(entity_name, config, entities_factory)
         
         self.table = entities_factory.metadata.tables[table_name]
@@ -96,7 +56,7 @@ class SQLEntityFactory(base_factory.EntityFactory):
 
     def _build_collection_cls(self):
         super()._build_collection_cls()
-        self.collection_cls._DSC_API = sql_entity.SQLCollectionAPI
+        # self.collection_cls._DSC_API = sql_entity.SQLCollectionAPI
 
     def _build_entity_cls(self):
         super()._build_entity_cls()
@@ -105,6 +65,22 @@ class SQLEntityFactory(base_factory.EntityFactory):
 
     def build_entity(self):
         result = super().build_entity()
-        self._build_api()
+        # self._build_api()
         return result
+
+
+
+class Factory(base_factory.Factory):
+
+    _entity_factory_cls = SQLEntityFactory
+
+    def __init__(self, config) -> None:
+        super().__init__(config)
+
+        db_path = config['path']
+        
+        self.engine = create_engine(db_path)
+        self.metadata = MetaData()
+        self.metadata.reflect(bind=self.engine)
+        self.table_names = self.metadata.tables.keys()
 

@@ -3,7 +3,7 @@ import os
 import json
 import yaml
 
-from .factories import sql_factory
+from .factories import sql_factory, mongo_factory
 
 SQL_SUPPORT = ["SQL","MySQL", "Oracle", "PostgreSQL", "SQLite"]
 MONGODB_SUPPORT = ["MongoDB"]
@@ -66,7 +66,7 @@ class Factory:
     def build(self):
         for conf_ds in self.config:
             ds_type = conf_ds["datasource"]
-            match ds_type :
+            match ds_type:
                 case ds if ds in SQL_SUPPORT:
                     self.ds_factories.append(sql_factory.Factory(conf_ds))
                 # case ds if ds in MONGODB_SUPPORT:

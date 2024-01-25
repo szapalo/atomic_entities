@@ -58,26 +58,26 @@ class MongoAPI:
             result[expr.name] = op
         return result        
 
-    def _find_exprs(cls, exprs: list, filters: dict):
+    def _find_exprs(cls, exprs: list=[], filters: dict = {}):
         api_exprs = cls._resolve_expressions(exprs)
         api_exprs.update(filters)
         return api_exprs
 
     @classmethod
-    def find(cls, exprs: list=[], filters: dict={}):
+    def find(cls, exprs: list = [], filters: dict = {}):
         api_exprs = cls._find_exprs(exprs, filters)
         return cls._collection.find(api_exprs)
 
     @classmethod
-    def find_one(cls, exprs: list, filters: dict={}):
+    def find_one(cls, exprs: list = [], filters: dict = {}):
         api_exprs = cls._find_exprs(exprs, filters)
         return cls._collection.findOne(api_exprs)
-    
+
     @classmethod
-    def update(cls, exprs: list, data: dict):
+    def update(cls, exprs: list = [], data: dict = {}):
         api_exprs = cls._find_exprs(exprs,{})
         return cls._collection.update(api_exprs, {"$set": data})
-    
+
     @classmethod
     def create(cls, data: dict):
         return cls._collection.insert_one(data)

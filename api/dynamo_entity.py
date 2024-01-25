@@ -12,4 +12,12 @@ class DynamoAPI:
     )
 
     @classmethod
-    return
+    def find(cls, exprs: list = [], filters: dict = {}):
+        pass
+
+    @classmethod
+    def find_one(cls, exprs: list = [], filters: dict = {}):
+        pass
+
+    @classmethod
+    def update(cls, ):
