@@ -1,8 +1,7 @@
 
 import typing
 from bson import ObjectId
-from ..utils import BinaryExpression, BoolOperators
-
+from ..utils import BinaryExpression, BoolOperators, Field
 
 _ITER_TYPES = (list,tuple)
 
@@ -14,7 +13,7 @@ class MongoAPI:
         # 'field_name' : 1 # 1 to inclue, 0 to exclude
         # '_id': 1 # ID is included by default
     }
-
+    # _primary_key = Field("_id")
     _id_fields = ["_id"]
 
     @classmethod
@@ -58,26 +57,28 @@ class MongoAPI:
             result[expr.name] = op
         return result        
 
-    def _find_exprs(cls, exprs: list=[], filters: dict = {}):
-        api_exprs = cls._resolve_expressions(exprs)
-        api_exprs.update(filters)
-        return api_exprs
+    # @classmethod
+    # def _find_exprs(cls, exprs: list=[], filters: dict = {}):
+    #     api_exprs = cls._resolve_expressions(exprs)
+    #     api_exprs.update(filters)
+    #     return api_exprs
 
     @classmethod
     def find(cls, exprs: list = [], filters: dict = {}):
-        api_exprs = cls._find_exprs(exprs, filters)
-        return cls._collection.find(api_exprs)
+        api_exprs = cls._resolve_expressions(exprs)
+        return list(cls._collection.find(api_exprs, filters))
 
     @classmethod
     def find_one(cls, exprs: list = [], filters: dict = {}):
-        api_exprs = cls._find_exprs(exprs, filters)
-        return cls._collection.findOne(api_exprs)
+        api_exprs = cls._resolve_expressions(exprs)
+        return cls._collection.find_one(api_exprs, filters)
 
     @classmethod
     def update(cls, exprs: list = [], data: dict = {}):
-        api_exprs = cls._find_exprs(exprs,{})
-        return cls._collection.update(api_exprs, {"$set": data})
+        api_exprs = cls._resolve_expressions(exprs)
+        return cls._collection.update_many(api_exprs, {"$set": data})
+        # handle .update_one ?
 
     @classmethod
-    def create(cls, data: dict):
-        return cls._collection.insert_one(data)
+    def insert(cls, data: typing.List[dict]):
+        cls._collection.insert_many(data)

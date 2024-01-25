@@ -23,7 +23,8 @@ _ITER_TYPES = (list, tuple)
 #         return result.fetchall()
 
 class SQLAPI:
-    
+
+    # To be defined through SQLEntityFactory    
     # _base_fields = []
     _table_ = None
     _engine_ = None 
@@ -107,11 +108,12 @@ class SQLAPI:
         cls._conn.commit()
 
     @classmethod
-    def insert(cls, data : dict = {}):
-        stmt = cls._insert_table.values(**data)
+    def insert(cls, data : dict|typing.List[dict] = {}):
+        stmt = cls._insert_table.values(data)
         cls._conn.execute(stmt)
         cls._conn.commit()
-    
+        # TODO : Must return with ID !!!!!!!!!!!!!
+
     @classmethod
     def delete(cls, exprs: list=[], filters: dict = {}):
         sql_exprs = cls._resolve_expressions(exprs) 

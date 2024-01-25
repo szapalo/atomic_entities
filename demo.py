@@ -15,7 +15,7 @@ f.build()
 
 A = f.entities_map['A']
 B = f.entities_map['B']
-
+MA = f.entities_map['MonA']
 bc = B.find()
 # a = A.findOne(one=10)
 # a.update(two="lalala")

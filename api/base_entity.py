@@ -209,6 +209,10 @@ class BaseEntity:
 
     @utils.class_or_instance_decorator
     def update(this, *args, **kwargs):
+        if args and isinstance(args[-1], dict):
+            kwargs = args[-1] | kwargs # we want kwargs to overwrite data
+            # kwargs.update(args[-1])
+            args = args[:-1]
         if inspect.isclass(this):
             return this._cls_update(args, kwargs)
         else:

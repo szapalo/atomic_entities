@@ -10,7 +10,7 @@ MONGODB_SUPPORT = ["MongoDB"]
 DYNAMODB_SUPPORT = ["DynamoDB"]
 SHOTGRID_SUPPORT = ["SG", "ShotGrid"]
 
-DS_SUPPORT = SQL_SUPPORT # + MONGODB_SUPPORT + DYNAMODB_SUPPORT + SHOTGRID_SUPPORT
+DS_SUPPORT = SQL_SUPPORT + MONGODB_SUPPORT # + DYNAMODB_SUPPORT + SHOTGRID_SUPPORT
 ENV_CONFIG = "ATOMIC_ENTITIES_CONFIG" 
 
 _supported_databases_err = Exception(
@@ -69,13 +69,14 @@ class Factory:
             match ds_type:
                 case ds if ds in SQL_SUPPORT:
                     self.ds_factories.append(sql_factory.Factory(conf_ds))
-                # case ds if ds in MONGODB_SUPPORT:
-                #     self.ds_factories.append(MongoBase.Factory(conf_ds))
+                case ds if ds in MONGODB_SUPPORT:
+                    self.ds_factories.append(mongo_factory.Factory(conf_ds))
                 # case ds if ds in DYNAMO_SUPPORT:
                     # self.ds_factories.append(DynamoBase.Factory(conf_ds))
                 # case ds if ds in SHOTGRID_SUPPORT:
                     # self.ds_factories.append(ShotGridBase.Factory(conf_ds))
                 case _ :
+                    # pass
                     raise _supported_databases_err
         
         for ds_factory in self.ds_factories:
