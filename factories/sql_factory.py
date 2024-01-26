@@ -33,11 +33,6 @@ class SQLEntityFactory(base_factory.EntityFactory):
         self.table = entities_factory.metadata.tables[table_name]
         self.engine = entities_factory.engine
 
-    # def get_all_fields(self):
-    #     return [
-    #         self.talbe.c[i] for i in self.table
-    #     ]
-
     def _build_api(self):
         class APIClass(sql_entity.SQLAPI):
             pass
@@ -54,19 +49,11 @@ class SQLEntityFactory(base_factory.EntityFactory):
 
         self.entity_cls._DS_API =  APIClass
 
-    def _build_collection_cls(self):
-        super()._build_collection_cls()
-        # self.collection_cls._DSC_API = sql_entity.SQLCollectionAPI
-
     def _build_entity_cls(self):
         super()._build_entity_cls()
         self._build_api()
         self.entity_cls._all_keys = self.table.columns.keys()
 
-    def build_entity(self):
-        result = super().build_entity()
-        # self._build_api()
-        return result
 
 
 

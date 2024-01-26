@@ -38,7 +38,7 @@ class BaseCollection:
 
     def __next__(self):
         if(self._idx < self._len):
-            new_entity = self._entity_cls(self._data[self._idx])
+            new_entity = self._entity_cls(self.data[self._idx])
             self._idx += 1
             self._entities.append(new_entity)
             return new_entity
@@ -63,7 +63,6 @@ class BaseCollection:
         self._idx = self._len
     
     def _fetch_many(self, idx): # TODO : Improve!!
-        print("_fetch_many")
         self._entities.extend(
             [self._entity_cls(d) for d in self.data[self._idx: idx]]
         )
@@ -211,7 +210,6 @@ class BaseEntity:
     def update(this, *args, **kwargs):
         if args and isinstance(args[-1], dict):
             kwargs = args[-1] | kwargs # we want kwargs to overwrite data
-            # kwargs.update(args[-1])
             args = args[:-1]
         if inspect.isclass(this):
             return this._cls_update(args, kwargs)

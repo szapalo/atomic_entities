@@ -1,11 +1,16 @@
 # Atomic Entities
 Unified API of different data sources.
 This package allows for modular ORM-like CRUD operations on datasets the following datasets : 
-SQL (SQLite, Postgresql, MySQL, Oracle, MS-SQL, Firebird, Sybase), MongoDB, DynamoDB, Shotgrid. Queried data of a single row/document is encasulated in an  `entity` object whose properties are specified by a config file. 
+- SQL (SQLite, Postgresql, MySQL, Oracle, MS-SQL, Firebird, Sybase)
+- MongoDB
+- DynamoDB
+- Shotgrid.
+
+Queried data of a single row/document is encasulated in an  `entity` object whose properties are user-specified in a config file. 
 
 ## Config
 
-The configuration file (json/yaml)
+The configuration file is, by **default**, accessed by reading the filepath set to the enviroment variable `ATOMIC_ENTITIES_CONFIG` To override in a **local enviroment**, the config can be saved your local workspace directory, with base name `atomic_entities_config`. File format supports YAML and JSON. 
 
 
 ## Example : 

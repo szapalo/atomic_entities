@@ -55,6 +55,21 @@
                     "one_val" : "name",
                     "two_val" : "val"
                 }
+            },
+            "MonB": {
+                "table_name" : "tbl2",
+                "properties": {
+                    "cont" : "content",
+                    "val" : "numb"
+                },
+                "link_properties": {
+                    "mona" : {
+                        "target_entity" : "MonA",
+                        "source_field" : "tb",
+                        "target_field" : "_id",
+                        "limit" : null
+                    }
+                }
             }
         }
     }

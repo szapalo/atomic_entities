@@ -6,8 +6,6 @@ from pprint import pprint
 with open(p) as f:
     config = json.load(f)
 
-from atomic_entities.factories import sql_factory
-
 from atomic_entities import factory
 f= factory.Factory(config)
 
@@ -16,6 +14,8 @@ f.build()
 A = f.entities_map['A']
 B = f.entities_map['B']
 MA = f.entities_map['MonA']
+MB = f.entities_map['MonB']
+
 bc = B.find()
 # a = A.findOne(one=10)
 # a.update(two="lalala")

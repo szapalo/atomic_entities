@@ -12,6 +12,7 @@ SHOTGRID_SUPPORT = ["SG", "ShotGrid"]
 
 DS_SUPPORT = SQL_SUPPORT + MONGODB_SUPPORT # + DYNAMODB_SUPPORT + SHOTGRID_SUPPORT
 ENV_CONFIG = "ATOMIC_ENTITIES_CONFIG" 
+LOCAL_CONFIG_BASENAME = "atomic_entities_config"
 
 _supported_databases_err = Exception(
     'Supported "datasource" config directive only allows one of the following: {}'.format(
@@ -30,7 +31,17 @@ class Factory:
         self.entities_map = {}
         self.collections_map = {}
         if not config:
-            config = os.environ[ENV_CONFIG]
+            env_path = os.getcwd()
+            local_config_paths = [
+                f for f in os.listdir(env_path) if os.path.isfile(f) and
+                os.path.splitext(f)[0] == LOCAL_CONFIG_BASENAME
+            ]
+        
+            if local_config_paths:
+                config = local_config_paths[0]
+            else:
+                config = os.environ[ENV_CONFIG]
+
         if isinstance(config,str):
             ext = os.path.splitext(config)[-1]
             with open(config) as f:

@@ -23,7 +23,10 @@ class MongoEntityFactory(base_factory.EntityFactory):
         
         APIClass._collection = self.collection
         self.entity_cls._DS_API =  APIClass
-    
+        base_fields = self.entity_cls._base_fields
+        if base_fields:
+            APIClass._base_projection = {f : 1 for f in base_fields}
+
     def _build_entity_cls(self):
         super()._build_entity_cls()
         self._build_api()

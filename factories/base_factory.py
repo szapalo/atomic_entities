@@ -29,7 +29,6 @@ class Factory:
 
 
     def init_entity_factories(self) -> "EntityFactory":
-        print("init_entity_factories")
         config_entities = self.config['entities']
         entity_factories = []
         for entity_name, entity_config in config_entities.items():
@@ -52,7 +51,6 @@ class Factory:
                 raise Exception(
                     'Config does not specify "table_name" for entity "{}"'.format(entity_name)
                 )
-        print("entity_factories ={}".format(entity_factories))
         return entity_factories
 
     def build_entities(self):
@@ -104,7 +102,6 @@ class EntityFactory:
                 def link_method(self):
                     value = self[src_key]
                     if not isinstance(value, _ITER_TYPES): value = [value]
-                    print(value)
                     return tgt_cls.find(tgt_field.in_(value))
             case _:
                 def link_method(self):
@@ -117,7 +114,7 @@ class EntityFactory:
         return property(fget=link_method)
 
     def get_base_keys(self):
-        return self.config['base_fields']
+        return self.config.get('base_fields',[])
 
     def _build_entity_cls(self):
         base_fields = self.get_base_keys()
@@ -145,15 +142,14 @@ class EntityFactory:
         self.entity_cls._collection_cls = self.collection_cls
 
     def _build_property(self, prop_name, key):
-            def prop_setter(self, v):
-                self._data[key] = v
+        def prop_setter(self, v):
+            self._data[key] = v
 
-            print("Set prop : {} -> {}".format(prop_name, key) )
-            prop_method = property(
-                fget = lambda self: self._data[key],
-                fset = prop_setter
-            )
-            setattr(self.entity_cls, prop_name, prop_method)
+        prop_method = property(
+            fget = lambda self: self._data[key],
+            fset = prop_setter
+        )
+        setattr(self.entity_cls, prop_name, prop_method)
 
     def _build_properties(self):        
         prop_config = self.config['properties']
@@ -164,13 +160,6 @@ class EntityFactory:
         
         for prop_name, name in prop_config.items():
             self._build_property(prop_name, name)
-            # prop_method = property(
-            #     fget = lambda self: self._data[name],
-            #     # fset = lambda self, value: prop_setter(self,name,value) 
-            # )
-            # setattr(self.entity_cls, prop_name, prop_method)
-
-    # def _crosslink_property(self, prop_name, config, )
 
     def crosslink_properties(
             self, entities_map :typing.Mapping[str, base_entity.BaseEntity]
@@ -218,3 +207,4 @@ class EntityFactory:
         self._build_properties()
         # self._build_link_properties()
         return ( self.entity_cls, self.collection_cls)
+
