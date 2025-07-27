@@ -18,6 +18,7 @@ class Factory:
 
     @classmethod
     def _validate_config(cls, config: dict):
+        # TODO
         return True
 
     def __init__(self, config: dict):
@@ -50,7 +51,8 @@ class Factory:
                 )
             else:
                 raise Exception(
-                    'Config does not specify "table_name" for entity "{}"'.format(entity_name)
+                    'Config does not specify "table_name" \
+                    for entity "{}"'.format(entity_name)
                 )
         print("entity_factories ={}".format(entity_factories))
         return entity_factories
@@ -145,13 +147,11 @@ class EntityFactory:
         self.entity_cls._collection_cls = self.collection_cls
 
     def _build_property(self, prop_name, key):
-            def prop_setter(self, v):
-                self._data[key] = v
 
             print("Set prop : {} -> {}".format(prop_name, key) )
             prop_method = property(
                 fget = lambda self: self._data[key],
-                fset = prop_setter
+                fset = lambda self,v: self._data.__setitem__(key, v)
             )
             setattr(self.entity_cls, prop_name, prop_method)
 
@@ -159,18 +159,31 @@ class EntityFactory:
         prop_config = self.config['properties']
         self.entity_cls._mapper = prop_config
         
-        def prop_setter(self, k, v):
-            self._data[k] = v
-        
         for prop_name, name in prop_config.items():
             self._build_property(prop_name, name)
-            # prop_method = property(
-            #     fget = lambda self: self._data[name],
-            #     # fset = lambda self, value: prop_setter(self,name,value) 
-            # )
-            # setattr(self.entity_cls, prop_name, prop_method)
 
-    # def _crosslink_property(self, prop_name, config, )
+    def _crosslink_property(self, target_entity_cls, prop_name, prop_config):
+
+        source_key_name = prop_config['source_field']
+        limit = prop_config.get('limit', 1)
+
+        target_key_name = prop_config.get('target_field')
+        if not target_key_name:
+            # TODO : default fallback should be target_entity's primary key 
+            raise Exception(
+                "target_key_name is not specified \
+                in config's entity {}.".format(self.name)
+            )
+
+        setattr(
+            self.entity_cls,
+            prop_name,
+            self._get_link_method(
+                target_entity_cls, 
+                Field(target_key_name), 
+                source_key_name, limit
+            )
+        )
 
     def crosslink_properties(
             self, entities_map :typing.Mapping[str, base_entity.BaseEntity]
@@ -180,27 +193,11 @@ class EntityFactory:
         if not link_config:
             return
 
-        for prop_name, cf in link_config.items():
-            target_entity_name = cf['target_entity']
+        for prop_name, prop_config in link_config.items():
+            target_entity_name = prop_config['target_entity']
             target_entity_cls = entities_map[target_entity_name]
-            source_key_name = cf['source_field']
-            limit = cf.get('limit', 1)
-
-            target_key_name = cf.get('target_field')
-            if not target_key_name:
-                # TODO : default fallback should be target_entity's primary key 
-                raise Exception(
-                    "target_key_name is not specified \
-                    in config's entity {}.".format(self.name)
-                )
-
-            setattr(
-                self.entity_cls,
-                prop_name,
-                self._get_link_method(
-                    target_entity_cls, Field(target_key_name), source_key_name, limit
-                )
-            )
+            self._crosslink_property(target_entity_cls, prop_name, 
+                                     prop_config)
 
     def get_entity_cls(self):
         if not self.entity_cls:
@@ -216,5 +213,4 @@ class EntityFactory:
         self._build_collection_cls()
         self._link_collection_and_entity()
         self._build_properties()
-        # self._build_link_properties()
-        return ( self.entity_cls, self.collection_cls)
+        return (self.entity_cls, self.collection_cls)
