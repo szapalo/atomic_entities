@@ -5,7 +5,7 @@ import yaml
 
 from .factories import sql_factory, mongo_factory
 
-SQL_SUPPORT = ["SQL","MySQL", "Oracle", "PostgreSQL", "SQLite"]
+SQL_SUPPORT = ["SQL", "MySQL", "Oracle", "PostgreSQL", "SQLite"]
 MONGODB_SUPPORT = ["MongoDB"]
 DYNAMODB_SUPPORT = ["DynamoDB"]
 SHOTGRID_SUPPORT = ["SG", "ShotGrid"]
@@ -94,6 +94,6 @@ class Factory:
         }
 
     def get_entity(self, entity_name):
-        return 
+        return self.entities_map[entity_name]
 
 

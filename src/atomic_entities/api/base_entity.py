@@ -63,7 +63,6 @@ class BaseCollection:
         self._idx = self._len
     
     def _fetch_many(self, idx): # TODO : Improve!!
-        print("_fetch_many")
         self._entities.extend(
             [self._entity_cls(d) for d in self.data[self._idx: idx]]
         )
@@ -77,21 +76,23 @@ class BaseCollection:
         
         for d in self.data:
             d.update(data)
-        
+
 
 # ------------------------------------------------------------------------------
 # ---------------------- BaseEntity --------------------------------------------
 # ------------------------------------------------------------------------------
+class MetaEntity(type):
+    def __repr__(cls):
+        return f"Entity: {cls.__name__}"
 
-class BaseEntity:
+class BaseEntity(metaclass=MetaEntity):
     
     _collection_cls = BaseCollection
     _DS_API = None
     _str: str = None # repr
-    _field_map : FieldMap = None 
     _primary_key: utils.Field = None # Field
     _all_keys : List[str] = None #
-
+    field_map : FieldMap = None 
 
     def __init__(self, data: DataType, **kwargs):
         self._data = data
@@ -143,8 +144,12 @@ class BaseEntity:
     # ------------------ Class Methods -----------------------------------------
 
     @classmethod
-    def get_all_keys(cls):
+    def get_keys(cls):
         return cls._all_keys
+
+    @classmethod
+    def get_primary_key(cls):
+        return cls._primary_key.name
 
     @classmethod
     def findByID(cls, id):
@@ -167,12 +172,16 @@ class BaseEntity:
 
     @classmethod
     def findOne(cls, *args, **kwargs):
-        result = cls._DS_API.find_one(args, kwargs)
+        result = cls._DS_API.find_one(args, **kwargs)
         return cls(result) if result else None
 
     @classmethod
     def find(cls, *args, **kwargs):
-        return cls._collection_cls(cls._DS_API.find(args, kwargs))
+        return cls._collection_cls(cls._DS_API.find(args, **kwargs))
+
+    @classmethod
+    def pd_find(cls, *args, **kwargs):
+        return cls._DS_API.pd_find(args, **kwargs)
 
     @classmethod
     def create(cls, data : DataType | LstDataType, **kwargs):
@@ -208,15 +217,13 @@ class BaseEntity:
         return cls._DS_API.update(exprs, kwargs)
 
     @utils.class_or_instance_decorator
-    def update(this, *args, **kwargs):
-        if args and isinstance(args[-1], dict):
-            kwargs = args[-1] | kwargs # we want kwargs to overwrite data
-            # kwargs.update(args[-1])
-            args = args[:-1]
+    def update(this, update_dict: dict, **kwargs):
+        update_map = update_dict | kwargs # we want kwargs to overwrite data
+        
         if inspect.isclass(this):
-            return this._cls_update(args, kwargs)
+            return this._cls_update(update_map)
         else:
-            return this._self_update(kwargs)
+            return this._self_update(update_map)
 
 
 
@@ -225,3 +232,5 @@ class BaseEntity:
 # ------------------------------------------------------------------------------
 BaseCollection._entity_cls = BaseEntity
 BaseEntity._collection_cls = BaseCollection
+
+

@@ -16,7 +16,7 @@ from sqlalchemy import (
 
 from . import base_factory
 from ..api import sql_entity
-from ..utils import BinaryExpression, Field, BoolOperators
+# from ..utils import BinaryExpression, Field, BooleanOps
 
 
 MANDATORY_CONFIG_ENTRIES = [
@@ -48,9 +48,14 @@ class SQLEntityFactory(base_factory.EntityFactory):
         APIClass._select_table = select(self.table)
         APIClass._update_table = update(self.table)
         APIClass._insert_table = insert(self.table)
-        APIClass._select_base_fields = select(*[
+        base_columns = [
             self.table.c[f] for f in self.get_base_keys()
-        ])
+        ]
+        APIClass._select_base_fields = select(*base_columns)
+        APIClass._column_labels_on_join = [
+            bc.label(f'{self.name}.{bc.name}') 
+            for bc in base_columns
+        ]
 
         self.entity_cls._DS_API =  APIClass
 
@@ -78,7 +83,7 @@ class Factory(base_factory.Factory):
         super().__init__(config)
 
         db_path = config['path']
-        
+
         self.engine = create_engine(db_path)
         self.metadata = MetaData()
         self.metadata.reflect(bind=self.engine)

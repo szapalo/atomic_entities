@@ -1,7 +1,8 @@
 
 import typing
 from bson import ObjectId
-from ..utils import BinaryExpression, BoolOperators, Field
+from ..utils import RelationalExpr, BooleanOps, Field
+import pandas as pd
 
 _ITER_TYPES = (list,tuple)
 
@@ -17,45 +18,47 @@ class MongoAPI:
     _id_fields = ["_id"]
 
     @classmethod
-    def _resolve_expressions(cls, exprs: typing.List[BinaryExpression]):
+    def _resolve_expressions(cls, expr: RelationalExpr):
+        value = expr.rhs
+
+        if expr.lhs.name in cls._id_fields:
+            if isinstance(value, _ITER_TYPES):
+                value = [
+                    v if isinstance(v, ObjectId) else ObjectId(v)
+                    for v in value
+                ]
+            else:
+                value = ObjectId(value)
+        match expr.operator:
+            case BooleanOps.eq_:
+                if isinstance(expr.value, _ITER_TYPES) :
+                    op = {"$in" : value}
+                else:
+                    op = value
+            case BooleanOps.in_:
+                op = {"$in" : value}
+            case BooleanOps.ne_:
+                op = {"$ne": value}
+            case BooleanOps.le_:
+                op = {"$lte": value}
+            case BooleanOps.ge_:
+                op = {"$gte": value}
+            case BooleanOps.lt_:
+                op = {"$lt": value}
+            case BooleanOps.gt_:
+                op = {"$gt": value}
+            case _ :
+                raise Exception("operator '{}' is not supported".format(expr.operator))
+        return op        
+
+    @classmethod
+    def _resolve_expressions(cls, exprs: typing.List[RelationalExpr]):
         result = {}
         for expr in exprs:
-            value = expr.value
-
             if isinstance(expr, dict):
                 result.update(expr)
                 continue
-
-            if expr.name in cls._id_fields:
-                if isinstance(value, _ITER_TYPES):
-                    value = [
-                        v if isinstance(v, ObjectId) else ObjectId(v)
-                        for v in value
-                    ]
-                else:
-                    value = ObjectId(value)
-            match expr.operator:
-                case BoolOperators.eq_:
-                    if isinstance(expr.value, _ITER_TYPES) :
-                        op = {"$in" : value}
-                    else:
-                        op = value
-                case BoolOperators.in_:
-                    op = {"$in" : value}
-                case BoolOperators.ne_:
-                    op = {"$ne": value}
-                case BoolOperators.le_:
-                    op = {"$lte": value}
-                case BoolOperators.ge_:
-                    op = {"$gte": value}
-                case BoolOperators.lt_:
-                    op = {"$lt": value}
-                case BoolOperators.gt_:
-                    op = {"$gt": value}
-                case _ :
-                    raise Exception("operator '{}' is not supported".format(expr.operator))
-            result[expr.name] = op
-        return result        
+            result[expr.name] = cls._resolve_expression(expr) 
 
     # @classmethod
     # def _find_exprs(cls, exprs: list=[], filters: dict = {}):
@@ -63,10 +66,19 @@ class MongoAPI:
     #     api_exprs.update(filters)
     #     return api_exprs
 
+    # @classmethod
+    # def _find_query(cls, exprs: list = [], filters: dict = {}, limit=0):
+
+
     @classmethod
-    def find(cls, exprs: list = [], filters: dict = {}):
+    def find(cls, exprs: list = [], filters: dict = {}, limit=0, **kwargs):
         api_exprs = cls._resolve_expressions(exprs)
-        return list(cls._collection.find(api_exprs, filters))
+        kwargs.update(filters)
+        return list(cls._collection.find(api_exprs, kwargs).limit(limit))
+
+    @classmethod
+    def pd_find(cls, *args, **kwargs) -> pd.DataFrame:
+        pd.DataFrame(cls.find(*args, **kwargs))
 
     @classmethod
     def find_one(cls, exprs: list = [], filters: dict = {}):

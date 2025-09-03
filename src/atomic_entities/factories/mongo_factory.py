@@ -27,8 +27,7 @@ class MongoEntityFactory(base_factory.EntityFactory):
     def _build_entity_cls(self):
         super()._build_entity_cls()
         self._build_api()
-        # self.entity_cls._all_keys = self.collection.keys()
-
+        self.entity_cls._all_keys = self.collection.keys()
 
 class Factory(base_factory.Factory):
 
@@ -40,7 +39,7 @@ class Factory(base_factory.Factory):
 
         db_path = config['path']
         self.client = MongoClient(db_path)
-
+        
         database_name = config.get('database')
         if not database_name in self.client.list_database_names():
             raise Exception('Database "{}" in {} does not exist'.format(

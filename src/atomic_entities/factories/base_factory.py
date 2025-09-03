@@ -126,11 +126,18 @@ class EntityFactory:
         class EntityClass(base_entity.BaseEntity):
             pass
         
+        self.entity_cls = EntityClass
+
         EntityClass.__name__ = EntityClass.__qualname__ = self.name
         EntityClass._base_fields = base_fields
-        EntityClass._primary_key = Field(self.config["primary_key"])
-        
-        self.entity_cls = EntityClass
+        EntityClass._primary_key = Field(self.entity_cls,
+                                         self.config["primary_key"])
+
+    def _set_field_map(self):
+        self.entity_cls.field_map = {
+            key: Field(self.entity_cls, key) 
+            for key in self.entity_cls._all_keys
+        }
 
     def _build_collection_cls(self):
         
@@ -180,7 +187,7 @@ class EntityFactory:
             prop_name,
             self._get_link_method(
                 target_entity_cls, 
-                Field(target_key_name), 
+                Field(target_entity_cls, target_key_name), 
                 source_key_name, limit
             )
         )
@@ -210,6 +217,7 @@ class EntityFactory:
 
     def build_entity(self):
         self._build_entity_cls()
+        self._set_field_map()
         self._build_collection_cls()
         self._link_collection_and_entity()
         self._build_properties()
