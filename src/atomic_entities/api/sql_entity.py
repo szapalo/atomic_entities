@@ -1,8 +1,8 @@
 
 import typing
-from sqlalchemy import select, update, delete, MappingResult, RowMapping, not_, and_, or_
+from sqlalchemy import select, update, delete, MappingResult, not_, and_, or_
 from .. import utils
-from ..utils import RelationalExpr, BooleanOps, LogicalOps, Field, LogicalExpr
+from ..utils import RelationalExpr, BooleanOps, LogicalOps, Field
 import pandas as pd
 _ITER_TYPES = (list, tuple)
 
@@ -12,22 +12,9 @@ LogicalOpMap = {
     LogicalOps.not_ : not_
 }
 
-# class SQLCollectionAPI:
-#     @classmethod
-#     def to_dict(cls, row: RowMapping):
-#         return dict(row)
-#     @classmethod
-#     def to_list_dict(cls, result, MappingResult):
-#         pass
-#     @classmethod
-#     def len(cls, result: MappingResult):
-#         return result.rowcount
-#     @classmethod
-#     def fetch_range(cls, result: MappingResult, start: int, end: int):
-#         return result.fetchmany(end-start)
-#     @classmethod
-#     def fetch_remaining(cls, result: MappingResult):
-#         return result.fetchall()
+# BooleanOpMap = {
+#     BooleanOps.eq_ : 
+# }
 
 class SQLAPI:
 
@@ -55,7 +42,6 @@ class SQLAPI:
     
     @classmethod
     def _resolve_expression(cls, expr: RelationalExpr):
-        print(f'-------- {expr} ---------- ')
         # curr_column = expr.lhs.entity_cls._DS_API._table_.c[expr.lhs.name] 
         curr_column = cls._table_.c[expr.lhs.name]
         rhs_value = expr.rhs.entity_cls._DS_API._table_.c[expr.rhs.name] \
@@ -105,7 +91,7 @@ class SQLAPI:
 
 
     @classmethod
-    def _resolve_join(cls, stmt, exprs):
+    def _resolve_join(cls, stmt, exprs: dict):
         if not exprs:
             return stmt
         result = cls._table_

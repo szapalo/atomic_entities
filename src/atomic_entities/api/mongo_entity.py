@@ -1,6 +1,6 @@
-
 import typing
 from bson import ObjectId
+from .. import utils
 from ..utils import RelationalExpr, BooleanOps, Field
 import pandas as pd
 
@@ -18,17 +18,22 @@ class MongoAPI:
     _id_fields = ["_id"]
 
     @classmethod
-    def _resolve_expressions(cls, expr: RelationalExpr):
+    def _cast_id(cls, value: str|typing.List[str]):
+        if isinstance(value, _ITER_TYPES):
+            return [
+                v if isinstance(v, ObjectId) else ObjectId(v)
+                for v in value
+            ]
+        else:
+            return ObjectId(value)
+
+    @classmethod
+    def _resolve_expression(cls, expr: RelationalExpr):
         value = expr.rhs
 
         if expr.lhs.name in cls._id_fields:
-            if isinstance(value, _ITER_TYPES):
-                value = [
-                    v if isinstance(v, ObjectId) else ObjectId(v)
-                    for v in value
-                ]
-            else:
-                value = ObjectId(value)
+            value = cls._cast_id(value)
+        
         match expr.operator:
             case BooleanOps.eq_:
                 if isinstance(expr.value, _ITER_TYPES) :
@@ -55,10 +60,19 @@ class MongoAPI:
     def _resolve_expressions(cls, exprs: typing.List[RelationalExpr]):
         result = {}
         for expr in exprs:
-            if isinstance(expr, dict):
+            if isinstance(expr, dict): ### WHAT IS THHIS IF BLOCK??? 
                 result.update(expr)
                 continue
-            result[expr.name] = cls._resolve_expression(expr) 
+            result[expr.lhs.name] = cls._resolve_expression(expr) 
+
+    @classmethod
+    def _resolve_dict_expressions(cls, mappings: dict):
+        return {
+            k: {
+                '$in' if isinstance(v, _ITER_TYPES) else '$eq': 
+                cls._cast_id(v) if k in cls._id_fields else v
+            } for k,v in mappings.items()
+        }
 
     # @classmethod
     # def _find_exprs(cls, exprs: list=[], filters: dict = {}):
@@ -69,19 +83,54 @@ class MongoAPI:
     # @classmethod
     # def _find_query(cls, exprs: list = [], filters: dict = {}, limit=0):
 
+    """
+    pipeline = [
+        { "$match": { "total": { "$gt": 300 } } },   # like a find()
+        {
+            "$lookup": {
+                from: "customers",
+                let: { cid: "$customer_id" },   // inject customer_id from the *orders* document
+                pipeline: [
+                    { $match: { $expr: { $eq: ["$_id", "$$cid"] } } }
+                    { $project: { _id: 0, name: 1 } }                   // select fields
+                ],
+                as: "customer_info"
+            }
+        { "$unwind": "$customer_info" }  # flatten the array
+        { "limit" : limit}
+    ]
+    """
+
+    def _resolve_join_table(cls, expr: dict):
+        pipeline_match = {}
 
     @classmethod
-    def find(cls, exprs: list = [], filters: dict = {}, limit=0, **kwargs):
+    def _resolve_join_expr(cls, exprs: dict):
+        for entity_cls, expr in exprs.items():
+            tgt_collection = entity_cls._DS_API._collection.name
+            
+
+
+    @classmethod
+    def find(cls, exprs: list = [], filters: dict = {}, limit=0, 
+             join : dict = {}, **kwargs):
         api_exprs = cls._resolve_expressions(exprs)
-        kwargs.update(filters)
-        return list(cls._collection.find(api_exprs, kwargs).limit(limit))
+        api_exprs.update(cls._resolve_dict_expressions(kwargs))
+        
+
+        pipeline = [
+            {'$match' : api_exprs},
+            {'limit': limit}
+        ]
+        cls._collection.aggregate()
+        # return list(cls._collection.find(api_exprs, kwargs).limit(limit))
 
     @classmethod
     def pd_find(cls, *args, **kwargs) -> pd.DataFrame:
-        pd.DataFrame(cls.find(*args, **kwargs))
+        return pd.DataFrame(cls.find(*args, **kwargs))
 
     @classmethod
-    def find_one(cls, exprs: list = [], filters: dict = {}):
+    def find_one(cls, exprs: list = [], filters: dict = {}, **kwargs):
         api_exprs = cls._resolve_expressions(exprs)
         return cls._collection.find_one(api_exprs, filters)
 
