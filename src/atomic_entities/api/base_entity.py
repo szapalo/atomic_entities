@@ -217,7 +217,7 @@ class BaseEntity(metaclass=MetaEntity):
         return cls._DS_API.update(exprs, kwargs)
 
     @utils.class_or_instance_decorator
-    def update(this, update_dict: dict, **kwargs):
+    def update(this, update_dict: dict = {}, **kwargs):
         update_map = update_dict | kwargs # we want kwargs to overwrite data
         
         if inspect.isclass(this):
