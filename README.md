@@ -28,7 +28,7 @@ factory.build()
 # Get entity class
 EntityA = factory.entities_map()
 
-ent_a = EntityA.findOne(id=10)
+ent_a = EntityA.find_one(id=10)
 
 ent_a = 
 

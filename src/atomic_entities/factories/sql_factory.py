@@ -7,7 +7,7 @@ Valid SQLite URL forms are:
 """
 import signal # unlike 'aexit', it can run exit handles on termination/kill/error
 # use 'signal' to disconnect
-
+import os
 import typing
 from sqlalchemy import (
     create_engine, Engine, MetaData, Table, Column, MappingResult,
@@ -18,6 +18,17 @@ from . import base_factory
 from ..api import sql_entity
 # from ..utils import BinaryExpression, Field, BooleanOps
 
+DATASOURCE_SUPPORT = {
+    # "SQL":"sql?????",
+    # "MySQL":"mysql????",
+    # "Oracle":"something????????",
+    "PostgreSQL":"postgresql+psycopg://",
+    "SQLite": "sqlite://"
+}
+
+# ENV = {"PORT"}
+
+# db_url = f"postgresql://username:password@{storage_ip}:5432/mydb"
 
 MANDATORY_CONFIG_ENTRIES = [
     "table_name", "base_fields",
@@ -48,10 +59,17 @@ class SQLEntityFactory(base_factory.EntityFactory):
         APIClass._select_table = select(self.table)
         APIClass._update_table = update(self.table)
         APIClass._insert_table = insert(self.table)
-        base_columns = [
-            self.table.c[f] for f in self.get_base_keys()
-        ]
-        APIClass._select_base_fields = select(*base_columns)
+        
+        select_keys = self.get_select_keys()
+        if select_keys == "*":
+            APIClass._select_base_fields = APIClass._select_table
+            base_columns = [c for c in self.table.columns]
+        else:
+            base_columns = [
+                self.table.c[f] for f in select_keys
+            ]
+            APIClass._select_base_fields = select(*base_columns)
+        
         APIClass._column_labels_on_join = [
             bc.label(f'{self.name}.{bc.name}') 
             for bc in base_columns
@@ -73,6 +91,7 @@ class SQLEntityFactory(base_factory.EntityFactory):
         # self._build_api()
         return result
 
+# db_url = f"postgresql://username:password@{storage_ip}:5432/mydb"
 
 
 class Factory(base_factory.Factory):
@@ -82,10 +101,28 @@ class Factory(base_factory.Factory):
     def __init__(self, config) -> None:
         super().__init__(config)
 
-        db_path = config['path']
-
+        db_path = self.build_url()
+        
         self.engine = create_engine(db_path)
         self.metadata = MetaData()
         self.metadata.reflect(bind=self.engine)
         self.table_names = self.metadata.tables.keys()
 
+    def build_url(self):
+        url = self.config.get('path')
+        if url:
+            return url
+        env = self.config.get('env')
+        if not env:
+            raise Exception(
+                "config requires 'path' or 'env' for engine connection"
+            )
+        datasource = DATASOURCE_SUPPORT[self.config['datasource']]
+        ds_name = self.config['name']
+        host = os.environ[f'{ds_name}_HOST']
+        user = os.environ[f'{ds_name}_USERNAME']
+        db_name = os.environ[f'{ds_name}_DBNAME']
+        pwd = os.environ[f'{ds_name}_PWD']
+        port = os.environ[f'{ds_name}_PORT']
+        url = f'{datasource}{user}:{pwd}@{host}:{port}/{db_name}'
+        return url 

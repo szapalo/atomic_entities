@@ -1,6 +1,7 @@
 
-from pprint import pprint
+
 p = "./tests/config_sqlite.json"
+
 import json
 from pprint import pprint
 with open(p) as f:

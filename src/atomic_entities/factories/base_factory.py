@@ -2,7 +2,7 @@
 import typing
 from ..api import base_entity
 from ..utils import Field
-_MANDATORY_CONFIG_SPECS = [ 'datasource', 'path' ]
+_MANDATORY_CONFIG_SPECS = [ 'datasource', 'path' ] # maybe need to change path to url
 _MANDATORY_ENTITY_CONFIG_SPECS = [ 'table_name', 'base_fields' ]
 _MANDATORY_PROPERTIES_CONFIG_SPECS = []
 _MANDATORY_LINKPROPS_CONFIG_SPECS = [ 'target_entity', 'source_field' ]
@@ -101,7 +101,7 @@ class EntityFactory:
         match limit:
             case 1 :
                 def link_method(self):
-                    return tgt_cls.findOne(tgt_field == self[src_key])
+                    return tgt_cls.find_one(tgt_field == self[src_key])
             case None:
                 def link_method(self):
                     value = self[src_key]
@@ -117,6 +117,15 @@ class EntityFactory:
                     )
         
         return property(fget=link_method)
+
+    def get_select_keys(self):
+        keys = self.config['base_fields']
+        if keys == "*":
+            return keys
+        primary_key = self.config.get('primary_key')
+        if primary_key:
+            keys.append(primary_key)
+        return keys
 
     def get_base_keys(self):
         return self.config['base_fields']

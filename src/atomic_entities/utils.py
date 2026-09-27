@@ -6,10 +6,10 @@ from enum import Enum
 ExprType: typing.TypeAlias = typing.Any # typing.Union[RelationalExpr"|"LogicalExpr"]
 
 def query_entity_link(self, entity_cls, field_name):
-    entity_cls.findByKey(self.key)
+    entity_cls.find_by_key(self.key)
 
 def query_entity_links(self, entity_cls, field_name):
-    entity_cls.findByKeys(self.key)
+    entity_cls.find_by_keys(self.key)
 
 class class_or_instance_decorator(classmethod):
     """ This is a descriptor that allows a method to be a @classmethod or 

@@ -96,14 +96,14 @@ class BaseEntity(metaclass=MetaEntity):
 
     def __init__(self, data: DataType, **kwargs):
         self._data = data
-        self._id = data[self._primary_key.name]
+        self.id_ = data[self._primary_key.name]
         self._str = None
 
     def __str__(self) -> str:
         if not self._str:
             self._str = "{entity_type}(id={id})".format(
                 entity_type = self.__class__.__name__,
-                id = self._id
+                id = self.id_
             )
         return self._str
 
@@ -134,7 +134,7 @@ class BaseEntity(metaclass=MetaEntity):
         self.update(new_data)
 
     def refresh(self) -> DataType:
-        current_data = self._DS_API.findByID(self._id)
+        current_data = self._DS_API.find_by_id(self.id_)
         updated_data = {
             k:v for k,v in current_data.items() if v != self._data[k] 
         }
@@ -152,26 +152,26 @@ class BaseEntity(metaclass=MetaEntity):
         return cls._primary_key.name
 
     @classmethod
-    def findByID(cls, id):
+    def find_by_id(cls, id):
         result = cls._DS_API.find_one((cls._primary_key == id,))
         return cls(result) if result else None
 
     @classmethod
-    def findByIDs(cls, id_lst : LstAny) -> BaseCollection:
+    def find_by_ids(cls, id_lst : LstAny) -> BaseCollection:
         return cls._collection_cls(
             cls._DS_API.find((cls._primary_key.in_(id_lst),))
         )
 
     @classmethod
-    def findByKey(cls, key):
-        return cls.findByID(key)
+    def find_by_key(cls, key):
+        return cls.find_by_id(key)
 
     @classmethod
-    def findByKeys(cls, key_lst : LstAny):
-        return cls.findByIDs(key_lst)
+    def find_by_keys(cls, key_lst : LstAny):
+        return cls.find_by_ids(key_lst)
 
     @classmethod
-    def findOne(cls, *args, **kwargs):
+    def find_one(cls, *args, **kwargs):
         result = cls._DS_API.find_one(args, **kwargs)
         return cls(result) if result else None
 
@@ -180,35 +180,26 @@ class BaseEntity(metaclass=MetaEntity):
         return cls._collection_cls(cls._DS_API.find(args, **kwargs))
 
     @classmethod
-    def pd_find(cls, *args, **kwargs):
-        return cls._DS_API.pd_find(args, **kwargs)
+    def find_pd(cls, *args, **kwargs):
+        return cls._DS_API.find_pd(args, **kwargs)
 
     @classmethod
-    def create(cls, data : DataType | LstDataType, **kwargs):
-        match data:
-            case dict():
-                return cls(cls._DS_API.create(dict(data, **kwargs)))
-            case list() | tuple() :
-                return cls._collection_cls(cls._DS_API.create(
-                        [dict(d, **kwargs) for d in data]
-                    )
-                )
-            case _:
-                raise Exception(
-                    "data argument of create() requires dict or list[dict] type"
-                )
-    
-    # create many
-    # @classmethod
-    # def create(cls, lst_data: typing.List[dict]=[]):
-    #     return cls._collection_cls(
-    #         cls._DS_API.create
-    #     )
+    def insert(cls, data : DataType, **kwargs):
+        # return cls._DS_API.insert(dict(data, **kwargs))
+        primary_key = cls._DS_API.insert(dict(data, **kwargs))
+        return cls.find_by_id(primary_key)
+
+    @classmethod
+    def insert_many(cls, data: LstDataType, **kwargs):
+        primary_keys = cls._DS_API.insert_many(
+            [dict(d, **kwargs) for d in data]
+        )
+        return cls.find_by_ids(primary_keys)
     
     # ------------------ Hybrid Methods ----------------------------------------
     
     def _self_update(self, data):
-        self._cls_update((self._primary_key == self._id,), data) 
+        self._cls_update((self._primary_key == self.id_,), data) 
         self._data.update(data)
         return data
 
@@ -217,11 +208,12 @@ class BaseEntity(metaclass=MetaEntity):
         return cls._DS_API.update(exprs, kwargs)
 
     @utils.class_or_instance_decorator
-    def update(this, update_dict: dict = {}, **kwargs):
-        update_map = update_dict | kwargs # we want kwargs to overwrite data
+    def update(this, data: dict = {}, expression=[], **kwargs):
+        update_map = data | kwargs # we want kwargs to overwrite data
         
         if inspect.isclass(this):
-            return this._cls_update(update_map)
+            assert(expression)
+            return this._cls_update(expression, update_map)
         else:
             return this._self_update(update_map)
 
@@ -232,5 +224,4 @@ class BaseEntity(metaclass=MetaEntity):
 # ------------------------------------------------------------------------------
 BaseCollection._entity_cls = BaseEntity
 BaseEntity._collection_cls = BaseCollection
-
 

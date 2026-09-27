@@ -1,6 +1,9 @@
 
 import typing
-from sqlalchemy import select, update, delete, MappingResult, not_, and_, or_
+from sqlalchemy import (
+    select, update, delete, MappingResult, not_, and_, or_,
+)
+from sqlalchemy.exc import SQLAlchemyError
 from .. import utils
 from ..utils import RelationalExpr, BooleanOps, LogicalOps, Field
 import pandas as pd
@@ -66,6 +69,14 @@ class SQLAPI:
                 op = curr_column > rhs_value
         return op
 
+    @classmethod
+    def _execute(cls, stmt):
+        try:
+            result = cls._conn.execute(stmt)
+            return result
+        except SQLAlchemyError as e:
+            cls._conn.rollback()
+            raise
 
     @classmethod
     def _resolve_expressions(cls, exprs: typing.List[RelationalExpr]):
@@ -140,11 +151,11 @@ class SQLAPI:
     @classmethod
     def find(cls, *args, **kwargs) -> MappingResult:
         stmt = cls._find_statement(*args, **kwargs)
-        result = cls._conn.execute(stmt).mappings().fetchall()
+        result = cls._execute(stmt).mappings().fetchall()
         return list(map(dict, result))
 
     @classmethod
-    def pd_find(cls, *args, **kwargs) -> pd.DataFrame:
+    def find_pd(cls, *args, **kwargs) -> pd.DataFrame:
         query_str = cls.find_query_str(*args, **kwargs)
         return pd.read_sql(query_str, cls._engine_)
     
@@ -152,7 +163,7 @@ class SQLAPI:
     def find_one(cls, exprs: list = [], filters: dict = {} , **kwargs) -> typing.Dict[str, typing.Any]:
         kwargs.update(filters)
         stmt = cls._select_expr(exprs, kwargs).limit(1)
-        result = cls._conn.execute(stmt)
+        result = cls._execute(stmt)
         result = result.mappings().fetchone()
         return dict(result) if result else None
 
@@ -162,21 +173,28 @@ class SQLAPI:
         stmt = cls._update_table.where(
             *cls._resolve_expressions(exprs)
         ).values(**kwargs)
-        cls._conn.execute(stmt)
+        cls._execute(stmt)
         cls._conn.commit()
+
 
     @classmethod
     def insert(cls, data : dict|typing.List[dict] = {}):
         stmt = cls._insert_table.values(data)
-        result = cls._conn.execute(stmt)
+        result = cls._execute(stmt)
         cls._conn.commit()
-        return result.inserted_primary_key()
+        return result.inserted_primary_key[0]
+
+    @classmethod
+    def insert_many(cls, data : typing.List[dict] = {}):
+        #TODO:
+        pass
 
     @classmethod
     def delete(cls, exprs: list=[], filters: dict = {}):
         sql_exprs = cls._resolve_expressions(exprs) 
         sql_filters = cls._resolve_filters(filters)
         stmt = cls._delete_table.where(*sql_exprs, *sql_filters)
-        cls._conn.execute(stmt)
+        cls._execute(stmt)
         cls._conn.commit()
+
 

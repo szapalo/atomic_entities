@@ -126,7 +126,7 @@ class MongoAPI:
         # return list(cls._collection.find(api_exprs, kwargs).limit(limit))
 
     @classmethod
-    def pd_find(cls, *args, **kwargs) -> pd.DataFrame:
+    def find_pd(cls, *args, **kwargs) -> pd.DataFrame:
         return pd.DataFrame(cls.find(*args, **kwargs))
 
     @classmethod

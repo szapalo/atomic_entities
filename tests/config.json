@@ -1,6 +1,7 @@
 [
     {
         "datasource": "SQLite",
+        "name": "dbname",
         "path": "sqlite:///tests/example.db",
         "entities" : {
             "A": {
