@@ -184,9 +184,8 @@ class BaseEntity(metaclass=MetaEntity):
         return cls._DS_API.find_pd(args, **kwargs)
 
     @classmethod
-    def insert(cls, data : DataType, **kwargs):
-        # return cls._DS_API.insert(dict(data, **kwargs))
-        primary_key = cls._DS_API.insert(dict(data, **kwargs))
+    def insert(cls, data_: DataType = {}, **kwargs):
+        primary_key = cls._DS_API.insert(dict(data_, **kwargs))
         return cls.find_by_id(primary_key)
 
     @classmethod

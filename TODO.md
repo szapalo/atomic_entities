@@ -1,4 +1,8 @@
 # 
+- Validate existence of fields in config (e.g. properties, base_fields, source_field, target_field)
+- Type Annotations for Entities
+- Doctring !
+
 1. make primary key optional in config
 2. base_keys should include source_field from linked properties 
 3. make entities importable
