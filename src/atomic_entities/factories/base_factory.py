@@ -172,7 +172,7 @@ class EntityFactory:
             setattr(self.entity_cls, prop_name, prop_method)
 
     def _build_properties(self):        
-        prop_config = self.config['properties']
+        prop_config = self.config.get('properties',{})
         self.entity_cls._mapper = prop_config
         
         for prop_name, name in prop_config.items():
