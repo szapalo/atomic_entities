@@ -132,17 +132,26 @@ class SQLAPI:
         ]
 
     @classmethod
-    def _select_expr(cls, exprs: list = [], filters: dict = {}):
+    def _select_expr(
+            cls, exprs: list = [], filters: dict = {}, 
+            fields: typing.Any=None
+    ):
         sql_exprs = cls._resolve_expressions(exprs) 
         sql_filters = cls._resolve_filters(filters)
-        return cls._select_base_fields.where(*sql_exprs, *sql_filters)
+        if not fields:
+            select_clause = cls._select_base_fields
+        elif fields == "*":
+            select_clause = cls._select_table
+        else:
+            select_clause = select(*[cls._table_.c[f] for f in fields])
+        return select_clause.where(*sql_exprs, *sql_filters)
 
     @classmethod
     def _find_statement(cls, exprs: list = [], filters: dict = {}, limit: int = None, 
-             join : dict = {}, **kwargs):
+             join : dict = {}, fields=None, **kwargs):
         kwargs.update(filters)
-        stmt = cls._select_expr(exprs, kwargs).limit(limit)
-        return cls._resolve_join(stmt, join)
+        stmt = cls._select_expr(exprs, kwargs, fields).limit(limit)
+        return stmt if not join else cls._resolve_join(stmt, join) 
     
     @classmethod
     def find_query_str(cls, *args, **kwargs):
@@ -160,11 +169,9 @@ class SQLAPI:
         return pd.read_sql(query_str, cls._engine_)
     
     @classmethod
-    def find_one(cls, exprs: list = [], filters: dict = {} , **kwargs) -> typing.Dict[str, typing.Any]:
-        kwargs.update(filters)
-        stmt = cls._select_expr(exprs, kwargs).limit(1)
-        result = cls._execute(stmt)
-        result = result.mappings().fetchone()
+    def find_one(cls, *args, **kwargs) -> typing.Dict[str, typing.Any]:
+        stmt = cls._find_statement(*args, limit=1, **kwargs)
+        result = cls._execute(stmt).mappings().fetchone()
         return dict(result) if result else None
 
     @classmethod

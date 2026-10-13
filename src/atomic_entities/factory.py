@@ -86,6 +86,7 @@ class Factory:
 
         for ds_factory in self.ds_factories:
             ds_factory.crosslink_entities(self.entities_map)
+        return self
     
     def fetch_entities(self):
         self.entities_map = {

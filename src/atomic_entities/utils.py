@@ -72,7 +72,7 @@ class Field:
     def __repr__(self):
         return f"Field({self.entity_cls}.{self.name})"
 
-    def __contains__(self, __values: list) -> RelationalExpr:
+    def in_(self, __values: list) -> RelationalExpr:
         return RelationalExpr(self, __values, BooleanOps.in_)
 
     def __eq__(self, __value: object) -> RelationalExpr:

@@ -61,6 +61,15 @@ class SQLEntityFactory(base_factory.EntityFactory):
         APIClass._insert_table = insert(self.table)
         
         select_keys = self.get_select_keys()
+
+        invalid_keys = set(select_keys).difference(self.table.columns.keys())
+        if invalid_keys:
+            raise Exception(
+                f"Config Error: table {self.table.name} contains " \
+                f"invalid keys '{invalid_keys}'. " \
+                f"Valid Keys are : {self.table.columns.keys()}"
+            )
+
         if select_keys == "*":
             APIClass._select_base_fields = APIClass._select_table
             base_columns = [c for c in self.table.columns]

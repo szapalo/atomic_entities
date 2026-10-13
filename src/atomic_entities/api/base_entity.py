@@ -211,7 +211,8 @@ class BaseEntity(metaclass=MetaEntity):
         update_map = data | kwargs # we want kwargs to overwrite data
         
         if inspect.isclass(this):
-            assert(expression)
+            if not expression:
+                raise Exception("expression is required")
             return this._cls_update(expression, update_map)
         else:
             return this._self_update(update_map)
