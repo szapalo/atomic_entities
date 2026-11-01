@@ -1,4 +1,4 @@
 import pandas as pd
-from api.base_entity import BaseEntity
+from api.base_entity import Entity
 
 

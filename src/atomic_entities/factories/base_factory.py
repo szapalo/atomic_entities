@@ -6,7 +6,7 @@ _MANDATORY_CONFIG_SPECS = [ 'datasource', 'path' ] # maybe need to change path t
 _MANDATORY_ENTITY_CONFIG_SPECS = [ 'table_name', 'base_fields' ]
 _MANDATORY_PROPERTIES_CONFIG_SPECS = []
 _MANDATORY_LINKPROPS_CONFIG_SPECS = [ 'target_entity', 'source_field' ]
-_DISALLOWLIST_PROP_SPECS = dir(base_entity.BaseEntity)
+_DISALLOWLIST_PROP_SPECS = dir(base_entity.Entity)
 
 _ITER_TYPES = (list, tuple)
 
@@ -66,7 +66,7 @@ class Factory:
             ) = entity_factory.build_entity()
     
     def crosslink_entities(
-            self, entities_map: typing.Mapping[str, base_entity.BaseEntity]
+            self, entities_map: typing.Mapping[str, base_entity.Entity]
     ):
         for entity_factory in self.entity_factories:
             entity_factory.crosslink_properties(entities_map)
@@ -96,7 +96,7 @@ class EntityFactory:
         return self.entities_map[entity_name]
 
     @classmethod
-    def _get_link_method(cls, tgt_cls: base_entity.BaseEntity,
+    def _get_link_method(cls, tgt_cls: base_entity.Entity,
                          tgt_field: Field, src_key: typing.Any, limit: int):
         match limit:
             case 1 :
@@ -132,7 +132,7 @@ class EntityFactory:
 
     def _build_entity_cls(self):
         base_fields = self.get_base_keys()
-        class EntityClass(base_entity.BaseEntity):
+        class EntityClass(base_entity.Entity):
             pass
         
         self.entity_cls = EntityClass
@@ -150,7 +150,7 @@ class EntityFactory:
 
     def _build_collection_cls(self):
         
-        class EntityCollection(base_entity.BaseCollection):
+        class EntityCollection(base_entity.EntityCollection):
             pass
 
         EntityCollection.__name__ = EntityCollection.__qualname__ = \
@@ -202,7 +202,7 @@ class EntityFactory:
         )
 
     def crosslink_properties(
-            self, entities_map :typing.Mapping[str, base_entity.BaseEntity]
+            self, entities_map :typing.Mapping[str, base_entity.Entity]
     ):
         
         link_config = self.config.get('link_properties')

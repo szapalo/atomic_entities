@@ -1,3 +1,4 @@
+from __future__ import annotations
 import inspect
 from typing import Any, List, Mapping
 from .. import utils
@@ -11,62 +12,68 @@ FieldMap = Mapping[str, utils.Field]
 # ----------------------- Collection -------------------------------------------
 # ------------------------------------------------------------------------------
 
-class BaseCollection:
+class EntityIterator:
+    def __init__(self, collection: EntityCollection):
+        self._collection = collection
+        self._idx = 0
+
+    def __next__(self):
+        if self._idx < self._collection._len:
+            if self._idx < len(self._collection._entities):
+                result = self._collection._entities[self._idx]
+            else:
+                result = self._collection._entity_cls(
+                    self._collection.data[self._idx]
+                )
+                self._collection._entities.append(result)
+            self._idx += 1
+            return result
+        else:
+            raise StopIteration
+
+
+class EntityCollection:
     _entity_cls = None
 
     def __init__(self, data: LstDataType ) -> None:
         self.data = data
         self._len = len(data)
         self._entities = []
-        self._idx = 0
     
     def __len__(self) -> int:
         return self._len
 
     def __iter__(self):
-        return self
+        return EntityIterator(self)
 
     def __getitem__(self, key: int | str):
         match key:
             case int():
-                key = key if key >= 0 else self._len - key
-                if self._idx <= key :
-                    self._fetch_many(key + 1)
+                key = key if key >= 0 else self._len + key
+                if key >= len(self.data):
+                    raise IndexError(
+                        f"Index out of range: {key}. "
+                        f"Collection len={self._len}"
+                    )
+                if key >= len(self._entities):
+                    [
+                        self._entities.append(
+                            self._entity_cls(self.data[i])
+                        ) for i in range(len(self._entities), key+1)
+                    ]
                 return self._entities[key]
             case str():
                 return [d[key] for d in self.data]
 
-    def __next__(self):
-        if(self._idx < self._len):
-            new_entity = self._entity_cls(self._data[self._idx])
-            self._idx += 1
-            self._entities.append(new_entity)
-            return new_entity
-        else:
-            raise StopIteration
-
     @property
     def entities(self):
-        match self._idx:
-            case 0:
-                self._fetch_all()
-            case self._len:
-                return self._entities
-            case _:
-                self._fetch_many(self._len)
+        len_curr_ent = len(self.entities)
+        if len_curr_ent < self._len:
+            for i in range(len_curr_ent, self._len):
+                self.entities.append(
+                    self._entity_cls(self.data[i])
+                )
         return self._entities
-
-    def _fetch_all(self):
-        self._entities = [
-            self._entity_cls(d) for d in self.data
-        ]
-        self._idx = self._len
-    
-    def _fetch_many(self, idx): # TODO : Improve!!
-        self._entities.extend(
-            [self._entity_cls(d) for d in self.data[self._idx: idx]]
-        )
-        self._idx = idx
     
     def update(self, data: DataType):
         id_field = self._entity_cls._primary_key
@@ -79,15 +86,15 @@ class BaseCollection:
 
 
 # ------------------------------------------------------------------------------
-# ---------------------- BaseEntity --------------------------------------------
+# ---------------------- Entity --------------------------------------------
 # ------------------------------------------------------------------------------
 class MetaEntity(type):
     def __repr__(cls):
         return f"Entity: {cls.__name__}"
 
-class BaseEntity(metaclass=MetaEntity):
+class Entity(metaclass=MetaEntity):
     
-    _collection_cls = BaseCollection
+    _collection_cls = EntityCollection
     _DS_API = None
     _str: str = None # repr
     _primary_key: utils.Field = None # Field
@@ -157,7 +164,7 @@ class BaseEntity(metaclass=MetaEntity):
         return cls(result) if result else None
 
     @classmethod
-    def find_by_ids(cls, id_lst : LstAny) -> BaseCollection:
+    def find_by_ids(cls, id_lst : LstAny) -> EntityCollection:
         return cls._collection_cls(
             cls._DS_API.find((cls._primary_key.in_(id_lst),))
         )
@@ -207,13 +214,13 @@ class BaseEntity(metaclass=MetaEntity):
         return cls._DS_API.update(exprs, kwargs)
 
     @utils.class_or_instance_decorator
-    def update(this, data: dict = {}, expression=[], **kwargs):
+    def update(this, data: dict = {}, expressions=[], **kwargs):
         update_map = data | kwargs # we want kwargs to overwrite data
         
         if inspect.isclass(this):
-            if not expression:
+            if not expressions:
                 raise Exception("expression is required")
-            return this._cls_update(expression, update_map)
+            return this._cls_update(expressions, update_map)
         else:
             return this._self_update(update_map)
 
@@ -222,6 +229,6 @@ class BaseEntity(metaclass=MetaEntity):
 # ------------------------------------------------------------------------------
 # Link Classes
 # ------------------------------------------------------------------------------
-BaseCollection._entity_cls = BaseEntity
-BaseEntity._collection_cls = BaseCollection
+EntityCollection._entity_cls = Entity
+Entity._collection_cls = EntityCollection
 
