@@ -4,6 +4,7 @@ import json
 import yaml
 
 from .factories import sql_factory, mongo_factory
+from .utils import Dict
 
 SQL_SUPPORT = ["SQL", "MySQL", "Oracle", "PostgreSQL", "SQLite"]
 MONGODB_SUPPORT = ["MongoDB"]
@@ -27,8 +28,8 @@ _config_input_err = Exception(
 class Factory:
     def __init__(self, config=None):
         self.ds_factories = []
-        self.entities_map = {}
-        self.collections_map = {}
+        self.entities_map = Dict()
+        self.collections_map = Dict()
         if not config:
             config = os.environ[ENV_CONFIG]
         if isinstance(config,str):

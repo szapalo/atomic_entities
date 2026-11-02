@@ -1,7 +1,7 @@
 
 import typing
 from ..api import base_entity
-from ..utils import Field
+from ..utils import Field, Dict
 _MANDATORY_CONFIG_SPECS = [ 'datasource', 'path' ] # maybe need to change path to url
 _MANDATORY_ENTITY_CONFIG_SPECS = [ 'table_name', 'base_fields' ]
 _MANDATORY_PROPERTIES_CONFIG_SPECS = []
@@ -143,10 +143,10 @@ class EntityFactory:
                                          self.config["primary_key"])
 
     def _set_field_map(self):
-        self.entity_cls.field_map = {
+        self.entity_cls.field_map = Dict({
             key: Field(self.entity_cls, key) 
             for key in self.entity_cls._all_keys
-        }
+        })
 
     def _build_collection_cls(self):
         

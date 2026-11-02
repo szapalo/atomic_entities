@@ -62,6 +62,13 @@ class LogicalOps(Enum):
 #     ['in_', 'eq_', 'ne_', 'le_', 'ge_', 'lt_', 'gt_', 'and_', 'or_', 'not_']
 # )
 
+class Dict(dict):
+    def __repr__(self):
+        return f"{self.__class__.__name__}{super().__repr__()}"
+    def __getattr__(self, name):
+        return self[name]
+    def __setattr__(self, name, value):
+        self[name] = value
 
 
 class Field:

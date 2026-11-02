@@ -96,7 +96,6 @@ class Entity(metaclass=MetaEntity):
     
     _collection_cls = EntityCollection
     _DS_API = None
-    _str: str = None # repr
     _primary_key: utils.Field = None # Field
     _all_keys : List[str] = None #
     field_map : FieldMap = None 
@@ -104,15 +103,12 @@ class Entity(metaclass=MetaEntity):
     def __init__(self, data: DataType, **kwargs):
         self._data = data
         self.id_ = data[self._primary_key.name]
-        self._str = None
 
     def __str__(self) -> str:
-        if not self._str:
-            self._str = "{entity_type}(id={id})".format(
-                entity_type = self.__class__.__name__,
-                id = self.id_
-            )
-        return self._str
+        return "{entity_type}(id={id})".format(
+            entity_type = self.__class__.__name__,
+            id = self.id_
+        )
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -156,7 +152,7 @@ class Entity(metaclass=MetaEntity):
 
     @classmethod
     def get_primary_key(cls):
-        return cls._primary_key.name
+        return cls._primary_key
 
     @classmethod
     def find_by_id(cls, id):
@@ -214,7 +210,7 @@ class Entity(metaclass=MetaEntity):
         return cls._DS_API.update(exprs, kwargs)
 
     @utils.class_or_instance_decorator
-    def update(this, data: dict = {}, expressions=[], **kwargs):
+    def update(this, expressions=[], data: dict = {}, **kwargs):
         update_map = data | kwargs # we want kwargs to overwrite data
         
         if inspect.isclass(this):
