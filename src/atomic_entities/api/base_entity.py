@@ -161,9 +161,7 @@ class Entity(metaclass=MetaEntity):
 
     @classmethod
     def find_by_ids(cls, id_lst : LstAny) -> EntityCollection:
-        return cls._collection_cls(
-            cls._DS_API.find((cls._primary_key.in_(id_lst),))
-        )
+        return cls.find(cls._primary_key.in_(id_lst))
 
     @classmethod
     def find_by_key(cls, key):
@@ -180,7 +178,8 @@ class Entity(metaclass=MetaEntity):
 
     @classmethod
     def find(cls, *args, **kwargs):
-        return cls._collection_cls(cls._DS_API.find(args, **kwargs))
+        results = cls._DS_API.find(args, **kwargs)
+        return cls._collection_cls(results) if results else None
 
     @classmethod
     def find_pd(cls, *args, **kwargs):
