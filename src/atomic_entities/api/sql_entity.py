@@ -5,7 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.exc import SQLAlchemyError
 from .. import utils
-from ..utils import RelationalExpr, BooleanOps, LogicalOps, Field
+from ..utils import RelationalExpr, LogicalExpr, BooleanOps, LogicalOps, Field
 import pandas as pd
 _ITER_TYPES = (list, tuple)
 
@@ -25,7 +25,6 @@ class SQLAPI:
     # _base_fields = []
     _table_ = None
     _engine_ = None 
-    _conn = None
     _base_fields = []
     _select_table = None
     _select_table_one = None
@@ -33,7 +32,9 @@ class SQLAPI:
     _column_labels_on_join = None
     _update_table = None
     _insert_table = None
+    _delete_table = None
 
+    ## TODO :: ADD primary columns ! for insert + insert_many
     @classmethod
     def _get_column_lst(cls, field_names):
         if(field_names is None):
@@ -44,7 +45,35 @@ class SQLAPI:
         ]
     
     @classmethod
-    def _resolve_expression(cls, expr: RelationalExpr):
+    def _resolve_expression(cls, expr: RelationalExpr | LogicalExpr, depth=0):
+        if isinstance(expr, LogicalExpr):
+            return cls._resolve_logical_expression(expr, depth=depth+1)
+        elif isinstance(expr, RelationalExpr):
+            return cls._resolve_relational_expression(expr)
+        else:
+            raise Exception(f"Expression is not valid: {expr}")
+
+    @classmethod
+    def _resolve_logical_expression(cls, expr: LogicalExpr, depth=0):
+        if depth > 4:
+            raise Exception(
+                "Too many nested logical operators. Reached depth limit."
+            )
+        resolved_lhs = cls._resolve_expression(expr.lhs, depth=depth)
+        
+        resolved_rhs = (
+            expr.rhs if expr.rhs is None else # Condition if operation is not_ 
+            cls._resolve_expression(expr.rhs, depth=depth) 
+        )
+
+        sql_operator = LogicalOpMap[expr.operator]
+        if expr.operator == LogicalOps.not_:
+            return sql_operator(resolved_lhs)
+        else:
+            return sql_operator(resolved_lhs, resolved_rhs)
+        
+    @classmethod
+    def _resolve_relational_expression(cls, expr: RelationalExpr):
         # curr_column = expr.lhs.entity_cls._DS_API._table_.c[expr.lhs.name] 
         curr_column = cls._table_.c[expr.lhs.name]
         rhs_value = expr.rhs.entity_cls._DS_API._table_.c[expr.rhs.name] \
@@ -70,13 +99,23 @@ class SQLAPI:
         return op
 
     @classmethod
-    def _execute(cls, stmt):
-        try:
-            result = cls._conn.execute(stmt)
-            return result
-        except SQLAlchemyError as e:
-            cls._conn.rollback()
-            raise
+    def _execute_select(cls, stmt, *args):
+        """
+        Applies for INSERT/UPDATE/DELETE.
+        Handles conn.rollback() on exception
+        """
+        with cls._engine_.connect() as conn:
+            return conn.execute(stmt, *args)
+
+    @classmethod
+    def _execute_write(cls, stmt, *args):
+        """
+        this applies for INSERT/UPDATE/DELETE.
+        handles conn.rollback() on exception and conn.commit()
+        """
+        with cls._engine_.begin() as conn:
+            return conn.execute(stmt, *args)
+
 
     @classmethod
     def _resolve_expressions(cls, exprs: typing.List[RelationalExpr]):
@@ -160,7 +199,7 @@ class SQLAPI:
     @classmethod
     def find(cls, *args, **kwargs) -> MappingResult:
         stmt = cls._find_statement(*args, **kwargs)
-        result = cls._execute(stmt).mappings().fetchall()
+        result = cls._execute_select(stmt).mappings().fetchall()
         return list(map(dict, result))
 
     @classmethod
@@ -171,7 +210,7 @@ class SQLAPI:
     @classmethod
     def find_one(cls, *args, **kwargs) -> typing.Dict[str, typing.Any]:
         stmt = cls._find_statement(*args, limit=1, **kwargs)
-        result = cls._execute(stmt).mappings().fetchone()
+        result = cls._execute_select(stmt).mappings().fetchone()
         return dict(result) if result else None
 
     @classmethod
@@ -180,28 +219,34 @@ class SQLAPI:
         stmt = cls._update_table.where(
             *cls._resolve_expressions(exprs)
         ).values(**kwargs)
-        cls._execute(stmt)
-        cls._conn.commit()
+        cls._execute_write(stmt)
 
 
     @classmethod
     def insert(cls, data : dict|typing.List[dict] = {}):
         stmt = cls._insert_table.values(data)
-        result = cls._execute(stmt)
-        cls._conn.commit()
-        return result.inserted_primary_key[0]
+        result = cls._execute_write(stmt)
+        return result.inserted_primary_key[0] # e.g. (123,)[0]
 
     @classmethod
-    def insert_many(cls, data : typing.List[dict] = {}):
-        #TODO:
-        pass
+    def insert_many(cls, data : typing.List[dict] = []):
+        cursor = cls._execute_write(cls._insert_table, data)
+        # tuple of primary keys: e.g. ((111,),(112,),(113,))
+        return [row[0] for row in cursor.inserted_primary_key_rows] 
+        
 
     @classmethod
     def delete(cls, exprs: list=[], filters: dict = {}):
         sql_exprs = cls._resolve_expressions(exprs) 
         sql_filters = cls._resolve_filters(filters)
-        stmt = cls._delete_table.where(*sql_exprs, *sql_filters)
-        cls._execute(stmt)
-        cls._conn.commit()
+        stmt = cls._delete_table.where(
+            *sql_exprs, *sql_filters
+        ).returning(cls._table.primary_key.columns)
+        # normally delete function does not return anything
+        # returning clause must be defined, 
+        # which requires fetchall in connection session
+        with cls._engine_.begin() as conn:
+            return conn.execute(stmt).fetchall()
+        
 
 

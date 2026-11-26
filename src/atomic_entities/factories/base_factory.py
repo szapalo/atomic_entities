@@ -123,7 +123,7 @@ class EntityFactory:
         if keys == "*":
             return keys
         primary_key = self.config.get('primary_key')
-        if primary_key:
+        if primary_key and primary_key not in keys:
             keys.append(primary_key)
         return keys
 

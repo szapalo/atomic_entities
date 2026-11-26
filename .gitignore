@@ -5,3 +5,4 @@ poetry.lock
 .venv
 uv.lock
 *.egg-info
+*.db

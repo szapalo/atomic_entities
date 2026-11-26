@@ -5,6 +5,7 @@
 - Type Annotations for Entities
 - Doctring !
 
+
 1. validate config , for sanity 
 1. make primary key optional in config
 2. base_keys should include source_field from linked properties 
@@ -12,7 +13,8 @@
 4. dynamic control of base_fields on import
 5. add join feature
 
-
+ISSUES to FIX:
+- find_by_id(None) returns None. but what if a record has id=None?
 
 ### Major Change:
 Make executions async: 

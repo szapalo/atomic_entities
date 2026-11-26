@@ -55,11 +55,11 @@ class SQLEntityFactory(base_factory.EntityFactory):
         
         APIClass._table_ = self.table
         APIClass._engine_ = self.engine
-        APIClass._conn = self.engine.connect()
         APIClass._select_table = select(self.table)
         APIClass._update_table = update(self.table)
         APIClass._insert_table = insert(self.table)
-        
+        APIClass._delete_table = delete(self.table)
+
         select_keys = self.get_select_keys()
 
         invalid_keys = set(select_keys).difference(self.table.columns.keys())

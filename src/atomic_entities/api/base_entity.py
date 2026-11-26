@@ -187,16 +187,17 @@ class Entity(metaclass=MetaEntity):
 
     @classmethod
     def insert(cls, data_: DataType = {}, **kwargs):
-        primary_key = cls._DS_API.insert(dict(data_, **kwargs))
-        return cls.find_by_id(primary_key)
+        return cls._DS_API.insert(dict(data_, **kwargs))
 
     @classmethod
     def insert_many(cls, data: LstDataType, **kwargs):
-        primary_keys = cls._DS_API.insert_many(
+        return cls._DS_API.insert_many(
             [dict(d, **kwargs) for d in data]
         )
-        return cls.find_by_ids(primary_keys)
     
+    @classmethod
+    def delete(cls, *args, **kwargs):
+        return cls._DS_API.delete(*args, **kwargs)
     # ------------------ Hybrid Methods ----------------------------------------
     
     def _self_update(self, data):

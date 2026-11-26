@@ -129,7 +129,7 @@ class RelationalExpr:
 
 class LogicalExpr(RelationalExpr):
     def __init__(self, lhs: RelationalExpr|LogicalExpr, 
-                 rhs: RelationalExpr|LogicalExpr, op : Enum) -> None:
+                 rhs: RelationalExpr|LogicalExpr|None, op : LogicalOps) -> None:
         super().__init__(lhs, rhs, op)
 
     def resolve(self, parent_res=None ):
